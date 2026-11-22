@@ -1,444 +1,593 @@
 # S-07 — Rukn (رُكن) Specialty Coffee Preorder Platform
 
-**Rukn (رُكن)** is an Arabic-first, real-time specialty coffee preorder web application designed for a specialty coffee shop in Morocco. The café offers a daily single-origin coffee bean roasted in limited quantities. Customers discover today's roast, place rapid preorders without mandatory registration, receive a trackable reference code, and monitor order progression in real-time. Baristas manage active orders, update statuses, adjust inventory, and review daily sales analytics through a dedicated operational dashboard.
+[![Backend .NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
+[![Entity Framework Core](https://img.shields.io/badge/EF%20Core-8.0.11-512BD4)](https://learn.microsoft.com/ef/core/)
+[![Database PostgreSQL](https://img.shields.io/badge/PostgreSQL-Npgsql%208.0.11-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Frontend Next.js](https://img.shields.io/badge/Next.js-16.4.6-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.3.0-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4.3.3-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![SignalR](https://img.shields.io/badge/SignalR-Real--Time-blue)](https://learn.microsoft.com/aspnet/core/signalr/)
+
+**Rukn (رُكن)** is an Arabic-first, real-time specialty coffee preorder platform engineered for boutique cafés operating limited-batch daily roasts. It addresses morning peak-hour bottlenecks by enabling customers to discover the daily roast, reserve cups through zero-login preorders, and follow preparation progression in real time, while granting baristas real-time queue orchestration, atomic inventory safeguards, and shift analytics.
 
 ---
 
-## 1. Technology Stack
+## Table of Contents
 
-### Backend
-- **Framework**: .NET 8 (`net8.0`) / ASP.NET Core Web API
-- **Language**: C# 12
-- **Database**: PostgreSQL
-- **ORM & Migrations**: Entity Framework Core 8 (`Npgsql.EntityFrameworkCore.PostgreSQL` v8.0.2)
-- **Real-Time Communication**: ASP.NET Core SignalR (`/hubs/orders`)
-- **Authentication**: ASP.NET Core Cookie Authentication (`HttpOnly`, `SameSite=Lax`)
-- **Password Hashing**: `BCrypt.Net-Next` (Work Factor 11)
-- **Documentation**: Swagger / OpenAPI (`Swashbuckle.AspNetCore` v6.6.2)
+- [1. Product Overview](#1-product-overview)
+- [2. Features](#2-features)
+- [3. Technology Stack](#3-technology-stack)
+- [4. Architecture](#4-architecture)
+- [5. Project Structure](#5-project-structure)
+- [6. Database Design & Business Rules](#6-database-design--business-rules)
+- [7. Getting Started](#7-getting-started)
+- [8. Configuration & Environment Variables](#8-configuration--environment-variables)
+- [9. API Reference](#9-api-reference)
+- [10. Real-Time Communication (SignalR)](#10-real-time-communication-signalr)
+- [11. Security Architecture](#11-security-architecture)
+- [12. Verification & Build Status](#12-verification--build-status)
+- [13. Scope, Limitations & Future Improvements](#13-scope-limitations--future-improvements)
+- [14. AI-Assisted Development Disclosure](#14-ai-assisted-development-disclosure)
+- [15. Architectural Decision Records](#15-architectural-decision-records)
 
-### Frontend
-- **Framework**: Next.js 16.4.6 (App Router with Turbopack)
-- **Library**: React 19.3.0
-- **Language**: TypeScript 5 (Strict Mode enabled)
-- **Styling**: Tailwind CSS v4.3.3
-- **Charts & Visualization**: Recharts v3.11.0 with `react-is` v19.3.1
-- **Icons**: Lucide React v1.77.0
-- **Real-Time Client**: `@microsoft/signalr` v11.0.0
-- **Typography**: Google Fonts `IBM Plex Sans Arabic` (RTL native)
+---
+
+## 1. Product Overview
+
+Specialty coffee shops face unique operational constraints: coffees are single-origin, roasted in small batches, prepared manually (V60, espresso, aeropress), and morning demand spikes create long queues.
+
+Rukn resolves this operational challenge with a streamlined, dual-persona system:
+
+- **Customer Journey**:
+  1. Customers access the web application and immediately see **Today's Brew** (قهوة اليوم) with origin details, processing notes, roast level, cup price (MAD), and remaining availability.
+  2. Customers trigger the preorder modal, specify cup quantity (1–20), enter customer name and valid Moroccan mobile number, and submit without mandatory account registration.
+  3. The system generates an unguessable tracking reference (`RUKN-YYYYMMDD-XXXXXX`), decrements inventory atomically, and displays a live 4-stage tracking timeline.
+  4. Customers can track orders at any time via `/track` or cancel before brewing begins.
+- **Barista Operational Workflow**:
+  1. Staff members sign in through a secure cookie-authenticated portal (`/staff/login`).
+  2. The dashboard (`/staff/dashboard`) provides real-time shift metrics (revenue, orders in queue, active roasts, and chart visualizations).
+  3. The live orders console (`/staff/orders`) pushes new orders immediately via SignalR without polling. Baristas transition orders sequentially (`New` ➔ `Preparing` ➔ `Ready` ➔ `Completed`) with single-tap actions or cancel with mandatory reasons.
+  4. Staff adjust coffee catalog items and stock levels on demand (`/staff/coffees`).
+- **Real-Time Synergy**:
+  Duplex SignalR messaging guarantees that status transitions made by baristas update customer screens instantaneously, while newly placed customer orders appear on the barista board with zero latency.
 
 ---
 
 ## 2. Features
 
-### Customer Features
-- **Featured Coffee Discovery**: View today's exclusive coffee (`/api/coffee/today`), tasting notes, roast level, country of origin, price in MAD, and available cup inventory.
-- **Coffee Catalog (`/coffee`)**: Browse the curated archive of specialty coffees with quick modal ordering.
-- **Instant Preorder Modal**: Order directly in a popup modal with customer name, Moroccan phone validation (`05/06/07...`), quantity selector, and optional notes.
-- **Stock Depletion Guards**: Instant visual feedback and server-side atomic stock rejection if the requested quantity exceeds inventory.
-- **Order Queue Counter**: Real-time counter showing the customer's current position in the preparation queue (`#X`).
-- **Live Order Tracking (`/order/[id]`)**: Real-time 4-stage visual timeline (جديد ➔ قيد التحضير ➔ جاهز للاستلام ➔ تم التسليم) animated with SignalR pushes.
-- **Customer Cancellation**: Self-service order cancellation while the order is still `New` or `Preparing`, with mandatory reason selection.
-- **Look Up by Reference (`/track`)**: Clean search input accepting order references (`RUKN-YYYYMMDD-XXXXXX`).
-- **Theme Switcher**: Instant toggle between specialty coffee Light and Dark modes.
+### Customer Experience
+- **Daily Coffee Spotlight (`/`)**: Displays the active daily offering fetched via `/api/coffee/today`, showing cup price, tasting notes, roast profile, origin, and live remaining cups.
+- **Coffee Catalog (`/coffee`)**: Browse the curated archive of specialty roasts with direct modal preorder triggers.
+- **Instant Preorder Modal**: Order flow collecting name, Moroccan mobile number (`05/06/07...` or `+212...`), quantity selector, and optional notes.
+- **Real-Time Visual Tracking (`/order/[id]`)**: 4-stage progression timeline (جديد ➔ قيد التحضير ➔ جاهز للاستلام ➔ تم التسليم) updated dynamically via SignalR.
+- **Order Lookup (`/track`)**: Public order search by reference code (`RUKN-YYYYMMDD-XXXXXX`).
+- **Customer Order Cancellation**: Allows customers to cancel their own orders directly from the tracking page provided the order is still in `New` or `Preparing` status, requiring a cancellation reason.
+- **RTL-First Arabic UI**: Native Right-to-Left layout powered by `IBM Plex Sans Arabic`, fluid spacing, and mobile touch targets $\ge 44$px.
+- **Theme Support**: Seamless toggle between Dark and Light mode across all customer pages.
 
-### Staff Features
-- **Secure Authentication (`/staff/login`)**: Cookie-based login with persistent sessions and server-side validation.
-- **Operational Dashboard (`/staff/dashboard`)**:
-  - Top KPI cards: Total orders, today's revenue, active preparations, ready orders, and low-stock alerts.
-  - Interactive Recharts analytics: Responsive daily revenue Area Chart (7d, 30d, this month), daily orders Bar Chart, and order status Donut Chart.
-  - Recent orders feed and today's coffee quick status.
-  - Refined Arabic date pill badge (`الأحد، 22 نوفمبر 2026`).
-- **Order Management (`/staff/orders`)**:
-  - Filter orders by status (`All`, `New`, `Preparing`, `Ready`, `Completed`, `Cancelled`) and search by customer name/phone/reference.
-  - One-tap status advancement (`بدء التحضير`, `تأكيد الجاهزية`, `تأكيد التسليم`).
-  - Restrained order cancellation button with confirmation dialog and preset reasons.
-  - Detailed modal view for reviewing customer notes and time stamps.
-- **Coffee Management (`/staff/coffees`)**: Complete CRUD operations for coffee products and inventory quantities.
-- **Profile & Settings (`/staff/settings`)**: Theme preference customization and password change tools.
+### Staff Operations
+- **Session Authentication (`/staff/login`)**: Secure HTTP-only cookie authentication with sliding expiration.
+- **Operations Dashboard (`/staff/dashboard`)**:
+  - Live KPI cards: Total orders, today's revenue, active preparations, ready orders, and low-inventory warnings.
+  - Interactive Recharts analytics: 7-day/30-day/monthly revenue Area Chart, daily orders Bar Chart, and order status Donut Chart.
+  - Live feed of recent preorders and today's coffee status widget.
+- **Live Orders Orchestration (`/staff/orders`)**:
+  - Multi-status filter tabs (`All`, `New`, `Preparing`, `Ready`, `Completed`, `Cancelled`) and text search (name, phone, order number).
+  - One-tap status progression buttons (`بدء التحضير`, `تأكيد الجاهزية`, `تأكيد التسليم`).
+  - Safe cancellation with confirmation modal and predefined reason choices.
+  - Order details modal showing full customer notes, phone number, and exact timestamps.
+- **Coffee & Inventory Management (`/staff/coffees`)**:
+  - Create new coffee offerings (`/staff/coffees/new`).
+  - Edit existing coffee profiles, origins, roast levels, prices, and tasting notes (`/staff/coffees/[id]/edit`).
+  - Inline toggle for coffee availability and instant inventory stock adjustments (`PATCH /api/staff/coffees/{id}/inventory`).
+  - Safe deletion safeguards preventing deletion of coffees with associated historical orders.
+- **Settings & Profile (`/staff/settings`)**: Theme preferences, session review, and password update functionality.
 
-### Real-Time Features (SignalR)
-- **Hub Endpoint**: `/hubs/orders`
-- **Customer Group Scoping**: Customers subscribe strictly to their private group (`order_{OrderNumber}`), preventing sensitive data leaks.
-- **Staff Group Broadcast**: Authenticated staff join `StaffDashboard` to receive instantaneous `OrderCreated` and `StaffOrderStatusChanged` pushes.
-- **Auto-Reconnection**: Resilient client configuration that auto-reconnects and resynchronizes via REST upon network drops.
+### Real-Time Capabilities (SignalR)
+- **Hub Route**: `/hubs/orders`.
+- **Targeted Group Subscriptions**: Customers subscribe strictly to their individual order group (`order_{ORDERNUMBER}`), eliminating public broadcast of personal information.
+- **Staff Broadcast Channel**: Authenticated staff join `StaffDashboard` to receive instant `OrderCreated` and `StaffOrderStatusChanged` notifications.
+- **Auto-Reconnection**: Resilient reconnection pipeline with exponential backoff and REST state resynchronization upon network recovery.
 
 ---
 
-## 3. Architecture
+## 3. Technology Stack
 
-The solution uses a clean separation of concerns between frontend, backend API, and database.
+| Layer | Technology | Version | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Backend Runtime** | .NET | `8.0` (`net8.0`) | High-performance C# 12 Web API runtime |
+| **Backend Framework** | ASP.NET Core | `8.0` | Dependency injection, routing, and controller pipeline |
+| **Database** | PostgreSQL | `15+` | Relational storage with check constraints and ACID transactions |
+| **ORM & Migrations** | EF Core / Npgsql | `8.0.11` | Data modeling, migrations, and atomic database execution |
+| **Real-Time Engine** | ASP.NET Core SignalR | `8.0` | Duplex WebSocket & long-polling communication |
+| **Authentication** | ASP.NET Core Cookie Auth | `8.0` | `HttpOnly`, `SameSite=Lax`, secure cookie session management |
+| **Password Hashing** | `BCrypt.Net-Next` | `4.0.3` | Salted password hashing (work factor 11) |
+| **API Documentation** | Swashbuckle (Swagger) | `6.6.2` | OpenAPI specification and interactive testing UI |
+| **Frontend Framework** | Next.js (App Router) | `16.4.6` | Server and Client React components with Turbopack |
+| **Frontend Library** | React | `19.3.0` | Reactive UI and component lifecycle management |
+| **Language** | TypeScript | `5.x` | Strict typing across API contracts and UI states |
+| **Styling** | Tailwind CSS | `4.3.3` | Utility-first styling with RTL support and dark mode |
+| **Charts** | Recharts & `react-is` | `3.11.0` / `19.3.1` | Responsive SVG area, bar, and donut charts |
+| **Icons** | Lucide React | `1.77.0` | Consistent iconography |
+| **Real-Time Client** | `@microsoft/signalr` | `11.0.0` | WebSocket client with automatic reconnection |
+
+---
+
+## 4. Architecture
 
 ```mermaid
 graph TD
-    subgraph Client ["Frontend (Next.js 16 / React 19)"]
-        Landing["Landing Page (/)"]
-        CoffeeCatalog["Catalog (/coffee)"]
-        TrackPage["Order Tracking (/order/:id)"]
-        StaffDash["Staff Dashboard (/staff/dashboard)"]
-        StaffOrders["Staff Orders (/staff/orders)"]
-        Theme["Theme & Toast Providers"]
+    subgraph Clients["Clients (Browser)"]
+        Customer["Customer Browser<br/>(RTL / Theme / Order Modal)"]
+        StaffUI["Barista Console<br/>(Dashboard / Orders / Coffees)"]
     end
 
-    subgraph Server ["Backend API (ASP.NET Core 8 Web API)"]
-        CoffeeCtrl["CoffeeController"]
-        OrdersCtrl["OrdersController"]
-        StaffAuthCtrl["StaffAuthController"]
-        StaffOrdersCtrl["StaffOrdersController"]
-        StaffCoffeesCtrl["StaffCoffeesController"]
-        Hub["OrderHub (/hubs/orders)"]
-        OrderSvc["OrderService"]
-        CoffeeSvc["CoffeeService"]
-        AuthSvc["StaffAuthService"]
+    subgraph Frontend["Frontend Layer (Next.js 16.4.6 / React 19)"]
+        AppRouter["Next.js App Router<br/>(Server & Client Components)"]
+        SignalRClient["SignalR Hub Client<br/>(@microsoft/signalr)"]
+        FetchClient["Typed REST Client<br/>(fetch with credentials)"]
     end
 
-    subgraph Database ["PostgreSQL (rkun_db)"]
-        DailyCoffeesTable[("DailyCoffees")]
-        OrdersTable[("Orders")]
-        StaffUsersTable[("StaffUsers")]
+    subgraph Backend["Backend Layer (ASP.NET Core .NET 8)"]
+        Program["Program.cs Pipeline<br/>(CORS / Auth / Exception Handler)"]
+        OrderHub["OrderHub (/hubs/orders)<br/>(Group Management)"]
+        
+        subgraph Controllers["API Controllers"]
+            CoffeeCtrl["CoffeeController<br/>(/api/coffee)"]
+            OrdersCtrl["OrdersController<br/>(/api/orders)"]
+            StaffAuthCtrl["StaffAuthController<br/>(/api/staff/auth)"]
+            StaffOrdersCtrl["StaffOrdersController<br/>(/api/staff/orders)"]
+            StaffCoffeesCtrl["StaffCoffeesController<br/>(/api/staff/coffees)"]
+        end
+
+        subgraph Services["Domain Services"]
+            CoffeeSvc["CoffeeService"]
+            OrderSvc["OrderService<br/>(Atomic Stock / Lifecycle)"]
+            AuthSvc["StaffAuthService<br/>(BCrypt / Cookie Claims)"]
+        end
     end
 
-    Landing -->|REST API| CoffeeCtrl
-    Landing -->|REST API| OrdersCtrl
-    TrackPage -->|REST API & SignalR| OrdersCtrl
-    TrackPage -.->|WebSocket / LongPolling| Hub
-    StaffDash -->|REST API & Auth Cookie| StaffOrdersCtrl
-    StaffOrders -->|REST API & Auth Cookie| StaffOrdersCtrl
-    StaffOrders -.->|WebSocket| Hub
-    
-    CoffeeCtrl --> CoffeeSvc
-    OrdersCtrl --> OrderSvc
-    StaffOrdersCtrl --> OrderSvc
-    StaffCoffeesCtrl --> CoffeeSvc
-    StaffAuthCtrl --> AuthSvc
+    subgraph Database["Data Layer (PostgreSQL)"]
+        EFCore["Entity Framework Core 8"]
+        PostgresDB[("PostgreSQL Database<br/>DailyCoffees / Orders / StaffUsers")]
+    end
 
-    OrderSvc -->|SignalR Push| Hub
-    OrderSvc -->|EF Core 8 / Npgsql| OrdersTable
-    OrderSvc -->|Atomic Stock Update| DailyCoffeesTable
-    CoffeeSvc -->|EF Core 8| DailyCoffeesTable
-    AuthSvc -->|BCrypt Verification| StaffUsersTable
+    Customer --> AppRouter
+    StaffUI --> AppRouter
+    AppRouter --> FetchClient
+    AppRouter --> SignalRClient
+
+    FetchClient -->|REST HTTP / HTTPS| Controllers
+    SignalRClient -->|WebSockets / Long-Polling| OrderHub
+
+    Controllers --> Services
+    OrderSvc -->|Group Notifications| OrderHub
+    Services --> EFCore
+    EFCore -->|Npgsql / SQL| PostgresDB
+```
+
+### Architectural Layer Responsibilities
+- **Frontend Layer**: Delivers server-rendered landing pages for fast initial paint, hydrates client components for interactive order placement, manages local theme state, and maintains persistent SignalR socket subscriptions.
+- **Presentation Layer (Controllers & Hub)**: Validates incoming HTTP requests, enforces cookie authorization attributes (`[Authorize]`), defines route contracts, and exposes WebSocket subscription endpoints.
+- **Business Domain Layer (Services)**: Encapsulates all business logic, enforces order lifecycle state transitions, validates phone formats and quantity boundaries, manages BCrypt hashing, and coordinates atomic inventory updates.
+- **Data Access Layer (EF Core & PostgreSQL)**: Manages relational mapping, applies database-level check constraints, executes atomic decrement updates, and guarantees transactional isolation.
+
+---
+
+## 5. Project Structure
+
+```text
+S-07/
+├── .agents/                        # Architectural standards, skills & rules
+│   ├── rules/                      # Security, architecture & coding guidelines
+│   └── skills/                     # Domain engineering skills
+├── backend/                        # ASP.NET Core .NET 8 Solution
+│   ├── Rukn.sln                    # Visual Studio Solution File
+│   └── Rukn.Api/                   # Main Web API Project
+│       ├── Controllers/            # REST API Controllers
+│       │   ├── CoffeeController.cs
+│       │   ├── OrdersController.cs
+│       │   ├── StaffAuthController.cs
+│       │   ├── StaffCoffeesController.cs
+│       │   └── StaffOrdersController.cs
+│       ├── Data/                   # Database Context, Seed & Migrations
+│       │   ├── Migrations/         # Sequential EF Core Migrations
+│       │   ├── AppDbContext.cs     # Entity configurations & constraints
+│       │   └── DbInitializer.cs    # Schema ensure-created & seed data
+│       ├── DTOs/                   # Data Transfer Objects & records
+│       ├── Entities/               # Domain Models (DailyCoffee, Order, StaffUser)
+│       ├── Enums/                  # OrderStatus enum definition
+│       ├── Exceptions/             # Domain exceptions & validation errors
+│       ├── Hubs/                   # SignalR OrderHub implementation
+│       ├── Middleware/             # Global exception handling & ProblemDetails
+│       ├── Services/               # Business Service Contracts & Implementations
+│       │   ├── Interfaces/
+│       │   └── Implementations/
+│       ├── appsettings.json        # Production configuration template
+│       ├── appsettings.Development.json
+│       ├── Program.cs              # DI container, pipeline & middleware setup
+│       └── Rukn.Api.csproj         # Package references & build settings
+├── frontend/                       # Next.js 16.4.6 App Router Project
+│   ├── app/                        # App Router Routes & Pages
+│   │   ├── coffee/                 # Public coffee catalog page
+│   │   ├── order/[id]/             # Real-time customer order tracking page
+│   │   ├── staff/                  # Staff portal
+│   │   │   ├── coffees/            # Coffee inventory & catalog management
+│   │   │   ├── dashboard/          # Metrics, KPI cards & Recharts analytics
+│   │   │   ├── login/              # Cookie authentication screen
+│   │   │   ├── orders/             # Live order queue management
+│   │   │   └── settings/           # Staff settings & password change
+│   │   ├── track/                  # Order reference search page
+│   │   ├── globals.css             # Tailwind CSS & theme tokens
+│   │   ├── layout.tsx              # Root HTML, IBM Plex Sans Arabic & providers
+│   │   └── page.tsx                # Customer landing page (Today's Coffee)
+│   ├── components/                 # Reusable React components
+│   │   ├── charts/                 # Recharts wrapper components
+│   │   ├── coffee/                 # CoffeeCard & PreorderModal
+│   │   ├── dashboard/              # Stats grids & recent orders feed
+│   │   └── orders/                 # Staff order cards & modals
+│   ├── lib/                        # API client & SignalR connection builder
+│   ├── types/                      # TypeScript domain types & interfaces
+│   ├── next.config.ts              # Next.js compiler & build configuration
+│   ├── package.json                # Dependencies & npm scripts
+│   └── tsconfig.json               # TypeScript strict configuration
+├── .env.example                    # Backend environment configuration template
+├── DECISIONS.md                    # Architecture Decision Records (ADRs)
+└── README.md                       # Project documentation
 ```
 
 ---
 
-## 4. Database Design
+## 6. Database Design & Business Rules
 
-The database schema is managed via Entity Framework Core migrations targeting PostgreSQL (`rkun_db`).
+### Entity Relationship Model
 
 ```mermaid
 erDiagram
-    DailyCoffees ||--o{ Orders : "DailyCoffeeId"
+    DailyCoffee ||--o{ Order : "receives"
     
-    DailyCoffees {
+    DailyCoffee {
         uuid Id PK
-        varchar(100) Name
-        text Description
-        varchar(100) Origin
-        varchar(50) RoastLevel
-        varchar(200) TastingNotes
-        varchar(500) ImageUrl
-        numeric(10_2) Price
-        integer AvailableQuantity
+        string Name "varchar(100)"
+        string Description "varchar(500)"
+        string Origin "varchar(100)"
+        string RoastLevel "varchar(100)"
+        string TastingNotes "varchar(200)"
+        string ImageUrl "varchar(500)"
+        decimal Price "decimal(18,2)"
+        int AvailableQuantity
         boolean IsAvailable
         timestamp CreatedAt
         timestamp UpdatedAt
     }
 
-    Orders {
+    Order {
         uuid Id PK
-        varchar(50) OrderNumber UK
+        string OrderNumber UK "varchar(50)"
         uuid DailyCoffeeId FK
-        varchar(100) CoffeeNameSnapshot
-        numeric(10_2) UnitPriceSnapshot
-        integer Quantity
-        numeric(10_2) TotalPrice
-        varchar(100) CustomerName
-        varchar(20) CustomerPhone
-        varchar(250) CustomerNote
-        varchar(500) CancellationReason
-        order_status Status
+        string CoffeeNameSnapshot "varchar(100)"
+        decimal UnitPriceSnapshot "decimal(18,2)"
+        int Quantity
+        decimal TotalPrice "decimal(18,2)"
+        string CustomerName "varchar(100)"
+        string CustomerPhone "varchar(20)"
+        string CustomerNote "varchar(250)"
+        int Status "0=New, 1=Preparing, 2=Ready, 3=Completed, 4=Cancelled"
+        string CancellationReason "varchar(500)"
         timestamp CreatedAt
         timestamp UpdatedAt
     }
 
-    StaffUsers {
+    StaffUser {
         uuid Id PK
-        varchar(50) Username UK
-        varchar(200) PasswordHash
+        string Username UK "varchar(50)"
+        string PasswordHash "varchar(200)"
         boolean IsActive
         timestamp CreatedAt
+        timestamp LastLoginAt
     }
 ```
 
-### Key Schema Constraints
-1. **Atomic Stock Decrement**: `ExecuteUpdateAsync` applies `SET AvailableQuantity = AvailableQuantity - @quantity WHERE Id = @coffeeId AND AvailableQuantity >= @quantity` ensuring inventory never drops below zero.
-2. **Cancellation Check Constraint (`CK_Orders_CancellationReason`)**: Enforces that orders with status `Cancelled` must have a non-empty `CancellationReason`, while non-cancelled orders have `null`.
-3. **Price & Name Snapshotting**: `UnitPriceSnapshot` and `CoffeeNameSnapshot` protect financial and operational history if a coffee's current price is edited later.
-4. **Order Status Enum**: Custom PostgreSQL enum `order_status` with values: `New`, `Preparing`, `Ready`, `Completed`, `Cancelled`.
-
----
-
-## 5. Prerequisites
-
-Before running the project locally, verify your system meets the following requirements:
-
-| Tool | Minimum Version | Verification Command |
-|---|---|---|
-| **.NET SDK** | 8.0.x | `dotnet --version` |
-| **Node.js** | 18.x or 20.x | `node -v` |
-| **npm** | 9.x or 10.x | `npm -v` |
-| **PostgreSQL** | 14.x or newer | `psql --version` |
-
----
-
-## 6. Environment Configuration
-
-### Backend Configuration
-The backend reads settings from `backend/Rukn.Api/appsettings.json` and overrides with `appsettings.Development.json`.
-
-```json
-{
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information",
-      "Microsoft.AspNetCore": "Warning"
-    }
-  },
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=rkun_db;Username=postgres;Password=YOUR_POSTGRES_PASSWORD"
-  },
-  "DevStaff": {
-    "Username": "baristarukn",
-    "Password": "Rukn2026!"
-  },
-  "Cors": {
-    "AllowedOrigins": [
-      "http://localhost:3000",
-      "http://127.0.0.1:3000"
-    ]
-  }
-}
-```
-
-### Frontend Configuration
-Create a `.env.local` file in `frontend/` (see `frontend/.env.example`):
-
-```bash
-NEXT_PUBLIC_API_URL=http://localhost:5000
-```
-
-> **Security Note**: Never commit actual database passwords or credentials to version control. Keep `.env` and sensitive configurations in `.gitignore`.
-
----
-
-## 7. Database Setup
-
-1. **Create the Database in PostgreSQL**:
+### Core Business Rules
+1. **Atomic Inventory Reservation**:
+   Stock decrement occurs via an atomic database statement wrapped inside an explicit database transaction:
    ```sql
-   CREATE DATABASE rkun_db;
+   UPDATE "DailyCoffees"
+   SET "AvailableQuantity" = "AvailableQuantity" - @Quantity, "UpdatedAt" = @Now
+   WHERE "Id" = @DailyCoffeeId AND "AvailableQuantity" >= @Quantity;
    ```
-
-2. **Apply EF Core Migrations**:
-   Navigate to the backend directory and apply existing migrations:
-   ```bash
-   cd backend/Rukn.Api
-   dotnet ef database update
+   If zero rows are affected, the transaction aborts and an `OutOfStockException` is thrown, eliminating race conditions under concurrency without external distributed lock infrastructure.
+2. **Snapshot Immutability**:
+   When an order is created, `CoffeeNameSnapshot` and `UnitPriceSnapshot` are permanently copied to the order record. Subsequent price modifications or title changes to `DailyCoffees` do not alter historical accounting records.
+3. **Order Lifecycle Transitions**:
+   State transitions are strictly forward-progressing:
+   - `New (0)` ➔ `Preparing (1)`
+   - `Preparing (1)` ➔ `Ready (2)`
+   - `Ready (2)` ➔ `Completed (3)`
+   - `New (0)` ➔ `Cancelled (4)`
+   - `Preparing (1)` ➔ `Cancelled (4)`
+   Any illegal transition (e.g., reverting `Ready` to `New`, or cancelling a `Completed` order) is rejected with a domain validation error.
+4. **Cancellation Stock Restoration & Check Constraint**:
+   Cancelling an order restores the reserved cups back to `DailyCoffees.AvailableQuantity` within the same transaction. An EF Core migration enforces database check constraint `CK_Orders_CancellationReason`:
+   ```sql
+   ("Status" = 4 AND "CancellationReason" IS NOT NULL AND length(trim("CancellationReason")) > 0)
+   OR
+   ("Status" <> 4 AND "CancellationReason" IS NULL)
    ```
-
-3. **Automatic Demo Seeding**:
-   Upon first application startup, `DbInitializer` seeds:
-   - Default coffee: **إثيوبيا سيداما** (Ethiopia Sidama, Price: 35 MAD, Available: 20 cups).
-   - Default staff user: `baristarukn` with password `Rukn2026!`.
 
 ---
 
-## 8. Backend Setup & Startup
+## 7. Getting Started
 
-1. **Navigate to the Backend Directory**:
+### Prerequisites
+- **.NET SDK**: Version `8.0` or higher ([Download .NET 8](https://dotnet.microsoft.com/download/dotnet/8.0))
+- **Node.js**: Version `20.x` or higher ([Download Node.js](https://nodejs.org/))
+- **PostgreSQL**: Version `15+` running locally or via Docker
+- **Git**
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/mrasgk/S-07.git
+cd S-07
+```
+
+### 2. Backend Setup
+1. Navigate to the backend directory:
    ```bash
    cd backend/Rukn.Api
    ```
-
-2. **Restore Dependencies & Build**:
+2. Configure your database connection string in `appsettings.Development.json`:
+   ```json
+   {
+     "ConnectionStrings": {
+       "DefaultConnection": "Host=localhost;Port=5432;Database=rukn_db;Username=postgres;Password=your_password"
+     }
+   }
+   ```
+3. Restore dependencies:
    ```bash
    dotnet restore
-   dotnet build
    ```
-
-3. **Run the API**:
+4. Apply database migrations:
+   ```bash
+   dotnet ef database update
+   ```
+   *(Note: `DbInitializer.cs` also runs auto-migration/seeding on startup via `EnsureCreatedAsync` if EF tools are not installed globally).*
+5. Run the backend API:
    ```bash
    dotnet run
    ```
-   - **API Base URL**: `http://localhost:5000`
-   - **Interactive Swagger Docs**: `http://localhost:5000/swagger`
-   - **SignalR Hub Endpoint**: `http://localhost:5000/hubs/orders`
+   The backend will start on `http://localhost:5000` (Swagger UI available at `http://localhost:5000/swagger`).
 
----
-
-## 9. Frontend Setup & Startup
-
-1. **Navigate to the Frontend Directory**:
+### 3. Frontend Setup
+1. Open a new terminal and navigate to the frontend directory:
    ```bash
    cd frontend
    ```
-
-2. **Install Dependencies**:
+2. Verify environment settings in `.env.local` (or copy from `frontend/.env.example`):
+   ```bash
+   cp .env.example .env.local
+   ```
+   Ensure `NEXT_PUBLIC_API_URL` is set:
+   ```env
+   NEXT_PUBLIC_API_URL=http://localhost:5000
+   ```
+3. Install dependencies:
    ```bash
    npm install
    ```
-
-3. **Start Development Server**:
+4. Start the development server:
    ```bash
    npm run dev
    ```
-   Open your browser to: `http://localhost:3000`
-
-4. **Production Build Verification**:
-   ```bash
-   npm run build
-   npm run start
-   ```
+   The frontend application will be accessible at `http://localhost:3000`.
 
 ---
 
-## 10. Application Workflow
+## 8. Configuration & Environment Variables
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Customer as Customer
-    participant Frontend as Next.js Client
-    participant API as ASP.NET Core API
-    participant DB as PostgreSQL
-    participant Hub as SignalR Hub
-    actor Staff as Barista (Staff)
+### Backend Configuration (`appsettings.json` / Environment Variables)
 
-    Customer->>Frontend: Selects Coffee & clicks "طلب قهوة اليوم"
-    Frontend->>Customer: Opens Preorder Modal
-    Customer->>Frontend: Enters Name, Moroccan Phone & Quantity
-    Frontend->>API: POST /api/orders
-    API->>DB: Atomic stock check & decrement (ExecuteUpdateAsync)
-    alt Insufficient Stock
-        DB-->>API: 0 rows affected
-        API-->>Frontend: 409 Conflict (OutOfStockException)
-        Frontend-->>Customer: Shows "الكمية المتبقية غير كافية"
-    else Stock Reserved
-        DB-->>API: Row updated & Order persisted
-        API->>Hub: Broadcast "OrderCreated" to StaffDashboard
-        Hub-->>Staff: Live incoming order alert on Dashboard
-        API-->>Frontend: 201 Created (Order Number & Queue #)
-        Frontend-->>Customer: Order Confirmation Modal & Redirect to /order/:id
-    end
+| Key | Description | Example / Default |
+| :--- | :--- | :--- |
+| `ConnectionStrings:DefaultConnection` | PostgreSQL connection string | `Host=localhost;Port=5432;Database=rukn_db;Username=postgres;Password=...` |
+| `Cors:AllowedOrigins` | Array of authorized client origins | `["http://localhost:3000"]` |
+| `DevStaff:Username` | Seed staff account username | `baristarukn` |
+| `DevStaff:Password` | Seed staff account password (development only) | Configurable via environment in production |
 
-    Customer->>Frontend: Monitors live timeline (/order/:id)
-    Frontend->>Hub: Joins group "order_RUKN-XXXXXX"
-    
-    Staff->>API: PATCH /api/staff/orders/:id/status (Preparing ➔ Ready)
-    API->>DB: Updates status to Ready
-    API->>Hub: Broadcast "OrderStatusUpdated"
-    Hub-->>Frontend: Pushes new status to customer
-    Frontend-->>Customer: Timeline advances with filled caramel checkmark & notification
-```
+> [!IMPORTANT]
+> In production environments, override `DevStaff:Password` and `ConnectionStrings:DefaultConnection` using environment variables (`CONNECTIONSTRINGS__DEFAULTCONNECTION` and `DEVSTAFF__PASSWORD`). Never commit raw credentials to version control.
+
+### Frontend Configuration (`frontend/.env.local`)
+
+| Variable | Description | Safe Default |
+| :--- | :--- | :--- |
+| `NEXT_PUBLIC_API_URL` | Base HTTP endpoint for the ASP.NET Core API | `http://localhost:5000` |
 
 ---
 
-## 11. API Endpoint Reference
+## 9. API Reference
 
+### Public Coffee Endpoints
 | Method | Endpoint | Description | Auth Required |
-|---|---|---|---|
-| `GET` | `/api/coffee/today` | Retrieve today's featured daily coffee | No |
-| `GET` | `/api/coffee` | List all available specialty coffees | No |
-| `POST` | `/api/orders` | Place a customer preorder with atomic stock verification | No |
-| `GET` | `/api/orders/{orderNumber}` | Retrieve customer order tracking details (safe DTO) | No |
-| `PATCH`| `/api/orders/{orderNumber}/cancel` | Customer-initiated order cancellation | No |
-| `POST` | `/api/staff/auth/login` | Authenticate staff and set secure `HttpOnly` cookie | No |
-| `POST` | `/api/staff/auth/logout` | Clear staff session cookie | Yes (Staff) |
-| `GET` | `/api/staff/auth/me` | Get currently signed-in staff user details | Yes (Staff) |
-| `POST` | `/api/staff/auth/change-password` | Change staff password (with current password verification) | Yes (Staff) |
-| `GET` | `/api/staff/orders` | List staff orders with optional status filter query | Yes (Staff) |
-| `GET` | `/api/staff/orders/{id}` | Get complete order details including contact phone & note | Yes (Staff) |
-| `PATCH`| `/api/staff/orders/{id}/status` | Advance order status (`Preparing`, `Ready`, `Completed`) | Yes (Staff) |
-| `PATCH`| `/api/staff/orders/{id}/cancel` | Cancel order with required reason & restore inventory | Yes (Staff) |
-| `GET` | `/api/staff/dashboard/summary` | Retrieve KPI card metrics (revenue, active orders, etc.) | Yes (Staff) |
-| `GET` | `/api/staff/dashboard/analytics` | Retrieve revenue and order status analytics (7d/30d/month) | Yes (Staff) |
-| `GET` | `/api/staff/coffees` | List all coffees for staff inventory management | Yes (Staff) |
-| `POST` | `/api/staff/coffees` | Create a new coffee product | Yes (Staff) |
-| `PUT` | `/api/staff/coffees/{id}` | Update coffee details, tasting notes, and price | Yes (Staff) |
-| `PATCH`| `/api/staff/coffees/{id}/availability` | Toggle coffee availability boolean | Yes (Staff) |
-| `PATCH`| `/api/staff/coffees/{id}/inventory` | Update available quantity in stock | Yes (Staff) |
-| `DELETE`| `/api/staff/coffees/{id}` | Delete a coffee product (safe check) | Yes (Staff) |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/coffee/today` | Fetch today's featured roast and stock availability | None |
+| `GET` | `/api/coffee` | List all available specialty coffees in the catalog | None |
+
+### Customer Order Endpoints
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/orders` | Submit a new preorder with atomic stock decrement | None |
+| `GET` | `/api/orders/{orderNumber}` | Retrieve sanitized order tracking details by reference code | None |
+| `PATCH` | `/api/orders/{orderNumber}/cancel` | Cancel an order (`New` or `Preparing`) with mandatory reason | None |
+
+### Staff Authentication Endpoints
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/staff/auth/login` | Authenticate staff and set secure session cookie | None |
+| `POST` | `/api/staff/auth/logout` | Revoke session and clear authentication cookie | Cookie Auth |
+| `GET` | `/api/staff/auth/me` | Return identity details of the current staff member | Cookie Auth |
+| `POST` | `/api/staff/auth/change-password` | Update authenticated staff user password | Cookie Auth |
+
+### Staff Order Management Endpoints
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/staff/orders` | Retrieve paginated orders with status and search filters | Cookie Auth |
+| `GET` | `/api/staff/orders/{id}` | Retrieve full internal order details by GUID | Cookie Auth |
+| `GET` | `/api/staff/dashboard/recent-orders` | Fetch the 5 most recent orders for dashboard feed | Cookie Auth |
+| `PATCH` | `/api/staff/orders/{id}/status` | Advance order status (`New` ➔ `Preparing` ➔ `Ready` ➔ `Completed`) | Cookie Auth |
+| `PATCH` | `/api/staff/orders/{id}/cancel` | Cancel order from staff console with reason & stock restore | Cookie Auth |
+| `GET` | `/api/staff/dashboard/summary` | Fetch dashboard KPI summary and 7-day revenue points | Cookie Auth |
+| `GET` | `/api/staff/dashboard/analytics` | Fetch analytics for period (`7d`, `30d`, `month`) | Cookie Auth |
+
+### Staff Coffee Management Endpoints
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/staff/coffees` | List all coffees (including unavailable) for management | Cookie Auth |
+| `GET` | `/api/staff/coffees/{id}` | Get specific coffee entity details by GUID | Cookie Auth |
+| `POST` | `/api/staff/coffees` | Create a new coffee product offering | Cookie Auth |
+| `PUT` | `/api/staff/coffees/{id}` | Update existing coffee profile and attributes | Cookie Auth |
+| `PATCH` | `/api/staff/coffees/{id}/availability` | Toggle coffee active/inactive visibility boolean | Cookie Auth |
+| `PATCH` | `/api/staff/coffees/{id}/inventory` | Update available cup quantity in stock | Cookie Auth |
+| `DELETE` | `/api/staff/coffees/{id}` | Delete a coffee product (blocked if orders exist) | Cookie Auth |
 
 ---
 
-## 12. SignalR Event Flow
+## 10. Real-Time Communication (SignalR)
 
 ### Hub Path: `/hubs/orders`
-- **Method `JoinOrderTracking(string orderNumber)`**: Customer invokes to subscribe to `order_{OrderNumber}`.
-- **Method `JoinStaffDashboard()`**: Authenticated staff invokes to subscribe to `StaffDashboard`.
-- **Event `OrderStatusUpdated`**:
-  - Sent to `order_{OrderNumber}`.
-  - Payload: `{ orderNumber, status, statusArabic, cancellationReason?, updatedAt }`.
-- **Event `OrderCreated`**:
-  - Sent to `StaffDashboard`.
-  - Payload: `{ id, orderNumber, coffeeNameSnapshot, quantity, totalPrice, customerName, status, statusArabic, createdAt }`.
-- **Event `StaffOrderStatusChanged`**:
-  - Sent to `StaffDashboard`.
-  - Payload: `{ id, orderNumber, status, statusArabic, cancellationReason?, updatedAt }`.
+
+The platform uses ASP.NET Core SignalR with fallback to long-polling for environments where WebSockets are restricted.
+
+### Hub Methods (Client Invocation)
+- **`JoinOrderTracking(string orderNumber)`**:
+  - Invoked by the customer tracking page.
+  - Adds the connection to group `order_{ORDERNUMBER}`.
+  - Ensures customers receive notifications strictly for their designated order.
+- **`JoinStaffDashboard()`**:
+  - Invoked by staff clients upon dashboard initialization.
+  - Checks `Context.User.Identity.IsAuthenticated`. Unauthenticated connections are rejected and logged.
+  - Adds authenticated staff connections to group `StaffDashboard`.
+
+### Hub Events (Server Broadcasts)
+
+#### 1. `OrderStatusUpdated`
+- **Target Group**: `order_{ORDERNUMBER}` (Customer channel)
+- **Trigger**: Barista changes order status or order is cancelled.
+- **Payload Example**:
+  ```json
+  {
+    "orderNumber": "RUKN-20261122-A1B2C3",
+    "status": "Ready",
+    "statusArabic": "جاهز",
+    "cancellationReason": null,
+    "updatedAt": "2026-11-22T14:30:00Z"
+  }
+  ```
+
+#### 2. `OrderCreated`
+- **Target Group**: `StaffDashboard` (Staff channel)
+- **Trigger**: New preorder successfully placed and committed to the database.
+- **Payload Example**:
+  ```json
+  {
+    "id": "e4f8b910-1234-4567-89ab-cdef01234567",
+    "orderNumber": "RUKN-20261122-A1B2C3",
+    "coffeeNameSnapshot": "إثيوبيا سيداما",
+    "quantity": 2,
+    "totalPrice": 70.00,
+    "customerName": "أحمد",
+    "status": "New",
+    "statusArabic": "جديد",
+    "createdAt": "2026-11-22T14:25:00Z"
+  }
+  ```
+
+#### 3. `StaffOrderStatusChanged`
+- **Target Group**: `StaffDashboard` (Staff channel)
+- **Trigger**: An order is advanced or cancelled.
+- **Payload Example**:
+  ```json
+  {
+    "id": "e4f8b910-1234-4567-89ab-cdef01234567",
+    "orderNumber": "RUKN-20261122-A1B2C3",
+    "status": "Preparing",
+    "statusArabic": "قيد التحضير",
+    "cancellationReason": null,
+    "updatedAt": "2026-11-22T14:28:00Z"
+  }
+  ```
 
 ---
 
-## 13. Security Mechanisms
+## 11. Security Architecture
 
-- **Cookie Authentication**: Employs `HttpOnly`, `SameSite=Lax`, and `Secure` cookies for staff sessions, defending against XSS token exfiltration.
-- **BCrypt Password Hashing**: Passwords stored using `BCrypt.Net-Next` with work factor 11.
-- **Privacy & IDOR Defense**: The public tracking endpoint (`/api/orders/{orderNumber}`) returns a sanitized `CustomerOrderResponse` that omits customer phone numbers and internal operational notes, indexed via an unguessable alphanumeric reference (`RUKN-YYYYMMDD-XXXXXX`).
-- **Atomic Concurrency Protection**: Database-level stock reservation (`ExecuteUpdateAsync`) prevents overselling race conditions under concurrent requests.
-- **Input Validation**: Server-side Moroccan phone normalization (`MoroccanPhoneValidator`), character length limits, and string sanitization.
-- **CORS Lockdown**: Specific origin restrictions matching frontend host configurations.
+### Implemented Security Controls
+- **Cookie-Based Staff Authentication**: Employs `HttpOnly`, `SameSite=Lax`, and `SecurePolicy=SameAsRequest` cookies (`Rukn.Staff.Auth`), mitigating client-side script token exfiltration (XSS).
+- **Password Protection**: Passwords hashed using `BCrypt.Net-Next` with a work factor of 11.
+- **Customer Privacy & IDOR Protection**: The public tracking endpoint (`/api/orders/{orderNumber}`) returns a sanitized `CustomerOrderResponse` that omits customer phone numbers and staff operational notes, accessible only via random alphanumeric identifiers (`RUKN-YYYYMMDD-XXXXXX`).
+- **Atomic Concurrency Defense**: Database-level stock reservation (`ExecuteUpdateAsync`) prevents overselling race conditions during traffic spikes.
+- **Input Validation**: Server-side normalization and validation of Moroccan telephone numbers (`MoroccanPhoneValidator`), character length boundaries, and quantity constraints (1–20).
+- **CORS Restrictions**: Explicit origin whitelist restricting API access to configured frontend hosts.
+- **SignalR Authorization**: Joining the `StaffDashboard` group requires an authenticated identity; unauthenticated connection attempts are refused.
 
----
-
-## 14. Testing & Verification Summary
-
-The following verification steps were executed on the actual codebase:
-- **Backend Build**: Verified clean compilation of .NET 8 project without errors or warnings (`dotnet build`).
-- **Frontend Build**: Verified production build using Next.js Turbopack compiler (`npm run build`) with 0 TypeScript and 0 routing errors across all 13 routes.
-- **Database Migrations**: Verified sequential application of EF Core migrations (`UpdatedSchema`, `ExpandOrderStatus`, `AddCancellationReason`) against PostgreSQL.
-- **End-to-End Scenarios Verified**:
-  1. Customer preorder creation with stock decrement.
-  2. Stock depletion rejection (`OutOfStockException`).
-  3. Barista order progression through `New` ➔ `Preparing` ➔ `Ready` ➔ `Completed`.
-  4. Customer order cancellation with stock restoration and SignalR broadcast.
-  5. Responsive layout verification across mobile (320px–430px) and desktop viewports.
-  6. Dark and Light theme toggle functionality.
+### Operational Boundaries & Recommendations
+- **Single-Instance SignalR**: SignalR runs in-memory. Multi-server production deployments require a backplane (Redis or PostgreSQL `LISTEN`/`NOTIFY`).
+- **Rate Limiting**: Public endpoints (`POST /api/orders`) would benefit from IP-based rate limiting (e.g., ASP.NET Core RateLimiter) to mitigate automated spam.
+- **Payment Processing**: Assumes in-store settlement upon order pickup; online payment gateways (CMI/Stripe) are out of scope for the current MVP.
 
 ---
 
-## 15. Scope and Limitations
+## 12. Verification & Build Status
 
-The project was intentionally scoped as a lean, resilient specialty coffee preorder MVP rather than an exhaustive enterprise restaurant ERP.
+The repository components have been directly verified on the current codebase:
 
-### Acknowledged Limitations & Future Work
-- **Payments**: Currently assumes payment upon in-store pickup (cash or TPE terminal); online payment gateways (CMI/Stripe) are out of MVP scope.
-- **Scale Out**: SignalR currently runs in single-instance memory; multi-instance cloud deployments would benefit from a Redis or PostgreSQL backplane.
-- **Push Notifications**: Relies on active browser sessions; adding Web Push notifications (Service Workers) would enhance pickup notification reliability when tabs are closed.
+| Component / Task | Command | Verified Outcome |
+| :--- | :--- | :--- |
+| **Backend Dependencies** | `dotnet restore backend/Rukn.sln` | **Clean**: All projects up-to-date for restore. |
+| **Backend Compilation** | `dotnet build backend/Rukn.sln` | **Verified**: Source compiles without syntax or type errors. |
+| **Frontend Production Build** | `npm run build` (Next.js 16.4.6 Turbopack) | **Passed**: 13/13 routes compiled successfully; TypeScript passed with 0 errors. |
+| **Frontend Code Quality** | `npm run lint` (ESLint 9) | **Passed**: 0 errors (12 non-breaking stylistic warnings). |
+| **Database Migrations** | `UpdatedSchema`, `ExpandOrderStatus`, `AddCancellationReason` | **Verified**: Sequential schema migrations present and validated. |
 
 ---
 
-## 16. Use of AI-Assisted Development Tools
+## 13. Scope, Limitations & Future Improvements
 
-AI tools were used throughout the development process as engineering support tools, particularly for:
+### Current Scope (MVP)
+- Focused single-origin daily coffee ordering workflow.
+- High-efficiency preordering without account creation friction.
+- Real-time order progress tracking and barista queue management.
+- Complete operational analytics and inventory controls.
 
-- **Code Review:** Reviewing implementation approaches and identifying potential code quality issues.
-- **Debugging Assistance:** Investigating errors, analyzing unexpected behavior and suggesting possible fixes.
-- **Code Quality:** Identifying potential code duplication, unnecessary complexity and opportunities for refactoring.
-- **Documentation:** Improving code comments, technical explanations and project documentation.
-- **Architecture:** Evaluating architectural alternatives and suggesting improvements to maintainability and separation of concerns.
-- **Security Review:** Identifying potential security weaknesses and recommending appropriate mitigation strategies.
-- **UI/UX:** Reviewing interface consistency, responsiveness, accessibility and user experience.
+### Intentionally Excluded from MVP
+- Integrated payment gateway processing (settlement occurs upon pickup).
+- Multi-item shopping cart (specialty coffee focus on single daily roasts).
+- Customer accounts and loyalty point tracking.
 
-AI-generated suggestions were treated as recommendations rather than automatically accepted solutions. Implementation decisions remained subject to developer review, adaptation and verification.
+### Recommended Future Enhancements
+1. **SignalR Distributed Backplane**: Integration of Redis Pub/Sub to allow horizontal API scaling.
+2. **Audio Alerts for Baristas**: Audio cues via the Web Audio API when new preorders arrive on the staff console.
+3. **Web Push Notifications**: Service Worker integration to deliver browser notifications when an order reaches `Ready`, even if the customer's tab is closed.
+4. **Automated Unit & Integration Test Suite**: Adding an integration test harness (`WebApplicationFactory`) for automated CI/CD pipeline verification.
 
-The developer retained responsibility for the architecture, implementation, technical decisions and final validation of the application.
+---
 
-#   S - 0 7  
- 
+## 14. AI-Assisted Development Disclosure
+
+AI assistance was utilized as an engineering productivity tool throughout the development of Rukn, specifically for:
+- Evaluating architectural trade-offs between monolithic and decoupled architectures.
+- Drafting and reviewing Entity Framework Core migration strategies.
+- Assisting in the implementation of RTL styling patterns and Recharts data bindings.
+- Code review, refactoring suggestions, and technical documentation auditing.
+
+All architectural decisions, business rules, code adaptations, security reviews, and final validations were conducted and approved by the engineering author.
+
+---
+
+## 15. Architectural Decision Records
+
+For detailed justifications regarding architecture, database constraints, lifecycle choices, and trade-offs, refer to the project's Architectural Decision Records:
+
+👉 **[DECISIONS.md](DECISIONS.md)**
