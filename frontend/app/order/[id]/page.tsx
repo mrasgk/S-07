@@ -10,6 +10,7 @@ import * as signalR from '@microsoft/signalr';
 import { AlertCircle, Copy, Check, Radio, RotateCcw, ArrowRight, XCircle } from 'lucide-react';
 import OrderTrackingTimeline from '@/components/OrderTrackingTimeline';
 import CancelOrderModal from '@/components/CancelOrderModal';
+import { PriceDisplay } from '@/components/MadSymbol';
 import { useToast } from '@/components/ToastProvider';
 import Link from 'next/link';
 
@@ -265,7 +266,7 @@ function TrackingContent({ params }: PageProps) {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-[#38251E]/70 dark:text-[#F7F3EC]/70">سعر الكوب:</span>
-              <span className="font-semibold text-[#38251E] dark:text-[#F7F3EC]">{order.unitPrice} د.م</span>
+              <PriceDisplay amount={order.unitPrice} weight="semibold" className="font-semibold text-[#38251E] dark:text-[#F7F3EC]" />
             </div>
             <div className="flex justify-between items-center">
               <span className="text-[#38251E]/70 dark:text-[#F7F3EC]/70">الكمية:</span>
@@ -279,7 +280,7 @@ function TrackingContent({ params }: PageProps) {
             </div>
             <div className="flex justify-between items-center pt-2.5 border-t border-[#DCC9B2]/30 dark:border-white/10 font-bold text-sm text-[#B77B4B]">
               <span>المبلغ الإجمالي:</span>
-              <span>{order.totalPrice} د.م</span>
+              <PriceDisplay amount={order.totalPrice} weight="semibold" className="text-[#B77B4B]" />
             </div>
           </div>
 

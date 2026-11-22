@@ -2,6 +2,29 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* MAD Symbol: proposed Moroccan dirham symbol (U+E000). https://madsymbol.com */
+@font-face {
+  font-family: "MAD Symbol";
+  src: url("/fonts/mad-symbol-300.woff2") format("woff2");
+  font-weight: 300;
+  font-display: swap;
+  unicode-range: U+E000;
+}
+@font-face {
+  font-family: "MAD Symbol";
+  src: url("/fonts/mad-symbol-400.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+E000;
+}
+@font-face {
+  font-family: "MAD Symbol";
+  src: url("/fonts/mad-symbol-600.woff2") format("woff2");
+  font-weight: 600;
+  font-display: swap;
+  unicode-range: U+E000;
+}
+
 :root {
   --color-espresso: #38251E;
   --color-cream: #F7F3EC;
@@ -38,4 +61,8 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #B77B4B;
+}
+
+.font-mono-tabular {
+  font-variant-numeric: tabular-nums;
 }

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PriceDisplay } from '@/components/MadSymbol';
 import type { StaffOrder } from '@/types/order';
 import { ArrowLeft } from 'lucide-react';
 
@@ -48,8 +49,9 @@ export default function DashboardRecentOrders({ orders, loading }: DashboardRece
                     {order.customerName}
                   </span>
                 </div>
-                <div className="text-[11px] text-[#38251E]/60 dark:text-[#F7F3EC]/60 truncate mt-0.5">
-                  {order.coffeeName} ({order.quantity} كوب) • {order.totalPrice} د.م
+                <div className="text-[11px] text-[#38251E]/60 dark:text-[#F7F3EC]/60 truncate mt-0.5 flex items-center gap-1">
+                  <span>{order.coffeeName} ({order.quantity} كوب) •</span>
+                  <PriceDisplay amount={order.totalPrice} weight="semibold" className="text-[#B77B4B] font-bold" />
                 </div>
               </div>
 

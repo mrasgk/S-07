@@ -6,6 +6,7 @@ import type { DailyCoffee } from '@/types/coffee';
 import type { CreateOrderPayload, CustomerOrder } from '@/types/order';
 import { fetchApi } from '@/lib/api';
 import { useToast } from '@/components/ToastProvider';
+import { PriceDisplay } from '@/components/MadSymbol';
 import {
   Sparkles,
   X,
@@ -153,7 +154,7 @@ export default function PreorderModal({ coffee, isOpen, onClose }: PreorderModal
               </div>
               <div className="flex justify-between items-center font-bold text-sm text-[#B77B4B] pt-2 border-t border-[#DCC9B2]/30 dark:border-white/10">
                 <span>المجموع:</span>
-                <span>{createdOrder.totalPrice} د.م</span>
+                <PriceDisplay amount={createdOrder.totalPrice} weight="semibold" className="text-[#B77B4B]" />
               </div>
             </div>
 
@@ -189,7 +190,7 @@ export default function PreorderModal({ coffee, isOpen, onClose }: PreorderModal
             <div className="bg-[#F7F3EC] dark:bg-[#1A1412] rounded-2xl p-3.5 mb-5 border border-[#DCC9B2]/40 dark:border-white/10 flex items-center justify-between text-xs">
               <div>
                 <span className="text-[10px] text-[#38251E]/60 dark:text-[#F7F3EC]/60 block">سعر الكوب الواحد</span>
-                <span className="font-bold text-[#B77B4B] text-sm">{coffee.price} د.م</span>
+                <PriceDisplay amount={coffee.price} weight="semibold" className="font-bold text-[#B77B4B] text-sm" />
               </div>
               <div className="text-end">
                 <span className="text-[10px] text-[#38251E]/60 dark:text-[#F7F3EC]/60 block">المتوفر في المخزون</span>
@@ -288,7 +289,7 @@ export default function PreorderModal({ coffee, isOpen, onClose }: PreorderModal
               {/* Price Calculation Bar */}
               <div className="bg-[#F7F3EC] dark:bg-[#1A1412] p-3 rounded-2xl flex items-center justify-between text-xs font-semibold text-[#38251E] dark:text-[#F7F3EC] border border-[#DCC9B2]/30 dark:border-white/10">
                 <span>المجموع الكلي:</span>
-                <span className="text-base font-bold text-[#B77B4B]">{totalPrice} د.م</span>
+                <PriceDisplay amount={totalPrice} weight="semibold" className="text-base font-bold text-[#B77B4B]" />
               </div>
 
               {/* Actions */}

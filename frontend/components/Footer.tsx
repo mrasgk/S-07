@@ -19,6 +19,9 @@ export default function Footer() {
             صنع باحترافية لعشاق القهوة المختصة
           </p>
           <p>(S-07) رُكن — جميع الحقوق محفوظة {new Date().getFullYear()}</p>
+          <p className="text-[10px] text-[#DCC9B2]/50 mt-1">
+            رمز الدرهم المغربي: <a href="https://madsymbol.com" target="_blank" rel="noopener noreferrer" className="hover:underline">المهدي العروسي (madsymbol.com)</a>
+          </p>
         </div>
       </div>
     </footer>

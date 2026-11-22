@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PriceDisplay } from '@/components/MadSymbol';
 import type { DailyCoffee } from '@/types/coffee';
 import { Sparkles, Edit3, Coffee, Plus } from 'lucide-react';
 
@@ -65,7 +66,7 @@ export default function DashboardTodayCoffee({ coffee, loading }: DashboardToday
             </div>
             <div className="pt-1.5 border-t border-[#DCC9B2]/20 dark:border-white/5">
               <span className="text-[10px] text-[#38251E]/50 dark:text-[#F7F3EC]/50 block">سعر الكوب</span>
-              <span className="font-bold text-[#B77B4B]">{coffee.price} د.م</span>
+              <PriceDisplay amount={coffee.price} weight="semibold" className="font-bold text-[#B77B4B]" />
             </div>
             <div className="pt-1.5 border-t border-[#DCC9B2]/20 dark:border-white/5">
               <span className="text-[10px] text-[#38251E]/50 dark:text-[#F7F3EC]/50 block">المخزون المتبقي</span>

@@ -1,4 +1,5 @@
 import type { StaffOrder } from '@/types/order';
+import { PriceDisplay } from '@/components/MadSymbol';
 import { X, XCircle } from 'lucide-react';
 
 interface StaffOrderDetailsModalProps {
@@ -61,11 +62,11 @@ export default function StaffOrderDetailsModal({
           </div>
           <div className="flex justify-between py-1 border-b border-[#DCC9B2]/20 dark:border-white/5">
             <span className="text-[#38251E]/60 dark:text-[#F7F3EC]/60">سعر الكوب:</span>
-            <span className="font-semibold text-[#38251E] dark:text-[#F7F3EC]">{order.unitPrice} د.م</span>
+            <PriceDisplay amount={order.unitPrice} weight="semibold" className="font-semibold text-[#38251E] dark:text-[#F7F3EC]" />
           </div>
           <div className="flex justify-between py-1 border-b border-[#DCC9B2]/20 dark:border-white/5 font-bold text-sm text-[#B77B4B]">
             <span>المبلغ الإجمالي:</span>
-            <span>{order.totalPrice} د.م</span>
+            <PriceDisplay amount={order.totalPrice} weight="semibold" className="text-[#B77B4B]" />
           </div>
           <div className="flex justify-between py-1 border-b border-[#DCC9B2]/20 dark:border-white/5">
             <span className="text-[#38251E]/60 dark:text-[#F7F3EC]/60">حالة الطلب:</span>

@@ -1,4 +1,5 @@
 import type { StaffOrder, OrderStatus } from '@/types/order';
+import { PriceDisplay } from '@/components/MadSymbol';
 import { Phone, Eye, FileText, Flame, CheckCircle2, XCircle } from 'lucide-react';
 
 interface StaffOrderCardProps {
@@ -80,7 +81,7 @@ export default function StaffOrderCard({
           </div>
           <div className="flex justify-between items-center text-[11px] text-[#38251E]/70 dark:text-[#F7F3EC]/70 pt-1 border-t border-[#DCC9B2]/30 dark:border-white/5">
             <span>المجموع:</span>
-            <span className="font-bold text-[#B77B4B]">{o.totalPrice} د.م</span>
+            <PriceDisplay amount={o.totalPrice} weight="semibold" className="font-bold text-[#B77B4B]" />
           </div>
         </div>
 

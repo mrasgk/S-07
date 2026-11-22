@@ -8,6 +8,7 @@ import type { DailyCoffee, CreateCoffeePayload, UpdateCoffeePayload } from '@/ty
 import { useToast } from '@/components/ToastProvider';
 import ConfirmationModal from '@/components/ConfirmationModal';
 import StaffLayout from '@/components/StaffLayout';
+import { PriceDisplay } from '@/components/MadSymbol';
 import {
   Plus,
   Edit,
@@ -355,9 +356,9 @@ export default function StaffCoffeesPage() {
                         <h3 className="text-sm sm:text-base font-bold text-[#38251E] dark:text-[#F7F3EC] truncate">
                           {coffee.name}
                         </h3>
-                        <span className="text-[11px] font-bold text-[#B77B4B] block mt-0.5">
-                          {coffee.price} درهم مغربي
-                        </span>
+                        <div className="mt-0.5">
+                          <PriceDisplay amount={coffee.price} weight="semibold" className="text-[11px] font-bold text-[#B77B4B]" />
+                        </div>
                       </div>
 
                       <button

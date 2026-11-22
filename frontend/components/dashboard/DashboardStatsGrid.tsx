@@ -1,4 +1,5 @@
 import type { StaffSummary } from '@/types/dashboard';
+import { PriceDisplay } from '@/components/MadSymbol';
 import {
   ShoppingBag,
   Clock,
@@ -89,7 +90,7 @@ export default function DashboardStatsGrid({ summary, loading }: DashboardStatsG
         <div className="min-w-0">
           <span className="text-[10px] text-[#38251E]/60 dark:text-[#F7F3EC]/60 block font-medium truncate">إيرادات اليوم</span>
           <span className="text-lg sm:text-xl font-black text-[#B77B4B] block">
-            {loading ? '-' : `${summary?.todayRevenue ?? 0} د.م`}
+            {loading ? '-' : <PriceDisplay amount={summary?.todayRevenue ?? 0} weight="semibold" />}
           </span>
         </div>
       </div>
@@ -102,7 +103,7 @@ export default function DashboardStatsGrid({ summary, loading }: DashboardStatsG
         <div className="min-w-0">
           <span className="text-[10px] text-[#38251E]/60 dark:text-[#F7F3EC]/60 block font-medium truncate">إجمالي الإيرادات</span>
           <span className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 block">
-            {loading ? '-' : `${summary?.totalRevenue ?? 0} د.م`}
+            {loading ? '-' : <PriceDisplay amount={summary?.totalRevenue ?? 0} weight="semibold" />}
           </span>
         </div>
       </div>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { DailyCoffee } from '@/types/coffee';
 import PreorderModal from './PreorderModal';
+import { PriceDisplay } from '@/components/MadSymbol';
 import {
   Coffee,
   Flame,
@@ -33,7 +34,7 @@ export default function CoffeeCardWithModal({ coffee }: CoffeeCardProps) {
             >
               {isAvailable ? `متاح (${coffee.availableQuantity} كوب)` : 'محصول غير متاح'}
             </span>
-            <span className="text-xs font-bold text-[#B77B4B]">{coffee.price} د.م</span>
+            <PriceDisplay amount={coffee.price} weight="semibold" className="text-xs font-bold text-[#B77B4B]" />
           </div>
 
           <h3 className="text-xl font-bold text-[#38251E] dark:text-[#F7F3EC] mb-2">{coffee.name}</h3>

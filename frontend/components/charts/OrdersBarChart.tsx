@@ -10,6 +10,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import type { RevenueDataPoint } from '@/types/dashboard';
+import { PriceDisplay } from '@/components/MadSymbol';
 
 interface OrdersBarChartProps {
   data: RevenueDataPoint[];
@@ -29,7 +30,10 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
       <div className="bg-[#1A1412] dark:bg-[#1A1412] text-[#F7F3EC] p-3 rounded-xl shadow-xl border border-[#DCC9B2]/20 text-xs min-w-[130px] dir-rtl text-right">
         <p className="text-[#F7F3EC]/70 text-[11px] mb-1 font-medium">{dataPoint.dayName} ({dataPoint.date})</p>
         <p className="text-base font-bold text-[#38251E] dark:text-[#F7F3EC]">{dataPoint.ordersCount} طلبات</p>
-        <p className="text-[11px] text-[#B77B4B] mt-0.5">{dataPoint.totalRevenue.toLocaleString()} د.م إيرادات</p>
+        <div className="text-[11px] text-[#B77B4B] mt-0.5 flex items-center gap-1 justify-end">
+          <span>إيرادات</span>
+          <PriceDisplay amount={dataPoint.totalRevenue.toLocaleString()} weight="semibold" />
+        </div>
       </div>
     );
   }

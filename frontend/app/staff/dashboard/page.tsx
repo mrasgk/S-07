@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { PriceDisplay } from '@/components/MadSymbol';
 import { fetchApi } from '@/lib/api';
 import { createOrderHubConnection } from '@/lib/signalr';
 import * as signalR from '@microsoft/signalr';
@@ -260,8 +261,9 @@ export default function StaffDashboardPage() {
               </p>
             </div>
 
-            <div className="bg-[#F7F3EC] dark:bg-[#1A1412] px-3 py-1 rounded-xl border border-[#DCC9B2]/30 dark:border-white/10 text-xs font-bold text-[#38251E] dark:text-[#F7F3EC] self-start sm:self-auto">
-              إجمالي الفترة: {analytics?.totalRevenue.toLocaleString() ?? 0} د.م
+            <div className="bg-[#F7F3EC] dark:bg-[#1A1412] px-3 py-1 rounded-xl border border-[#DCC9B2]/30 dark:border-white/10 text-xs font-bold text-[#38251E] dark:text-[#F7F3EC] self-start sm:self-auto flex items-center gap-1.5">
+              <span>إجمالي الفترة:</span>
+              <PriceDisplay amount={analytics?.totalRevenue.toLocaleString() ?? 0} weight="semibold" className="text-[#B77B4B]" />
             </div>
           </div>
 
