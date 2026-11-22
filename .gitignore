@@ -1,0 +1,29 @@
+# Build and Environment Artifacts
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Node & Next.js
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# Environment Variables & Secrets
+.env
+.env*.local
+*.env
+appsettings.Production.json
+
+# Operating System & IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Agent configuration and instructions
+.agents/
+
